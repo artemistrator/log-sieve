@@ -82,6 +82,8 @@ describe("fixture-based parsing", () => {
       priority: "high"
     });
     expect(summary.rootCauseHint).toBe("Test failures appear to be the main blocker.");
+    expect(summary.primaryBlocker).toBe("Test failures");
+    expect(summary.downstreamSummary).toBeUndefined();
   });
 
   it("parses longer vitest output with repeated failed-tests sections", () => {
@@ -145,6 +147,10 @@ describe("fixture-based parsing", () => {
     expect(summary.uniqueIssues).toBe(2);
     expect(summary.issues.map((issue) => issue.tool)).toEqual(["tsc", "test"]);
     expect(summary.rootCauseHint).toBe("TypeScript compile errors are blocking downstream checks.");
+    expect(summary.primaryBlocker).toBe("TypeScript compile/typecheck errors");
+    expect(summary.downstreamSummary).toBe("Test runner failures likely caused by compile/typecheck issues.");
+    expect(summary.primaryIssues?.every((issue) => issue.tool === "tsc")).toBe(true);
+    expect(summary.downstreamIssues?.every((issue) => issue.tool === "test")).toBe(true);
   });
 
   it("deduplicates across chained scripts with repeated sections and path variants", () => {
@@ -169,6 +175,71 @@ describe("fixture-based parsing", () => {
         file: "/Users/example/demo-app/tests/foo.test.ts"
       })
     );
+  });
+
+  it("prioritizes TypeScript blockers over downstream test failures", () => {
+    const summary = summarizeLog(loadFixture("compile-test-downstream.log"));
+
+    expect(summary.detectedTool).toBe("tsc");
+    expect(summary.issues[0]).toMatchObject({
+      tool: "tsc",
+      priority: "high"
+    });
+    expect(summary.primaryBlocker).toBe("TypeScript compile/typecheck errors");
+    expect(summary.downstreamSummary).toBe("Test runner failures likely caused by compile/typecheck issues.");
+    expect(summary.nextStep).toBe("Fix compile/typecheck issues first before trusting test failures.");
+  });
+
+  it("prioritizes module resolution blockers over downstream test failures", () => {
+    const summary = summarizeLog(loadFixture("import-test-downstream.log"));
+
+    expect(summary.detectedTool).toBe("tsc");
+    expect(summary.issues[0]).toMatchObject({
+      tool: "tsc",
+      ruleOrCode: "TS2307",
+      priority: "high"
+    });
+    expect(summary.primaryBlocker).toBe("TypeScript compile/typecheck errors");
+    expect(summary.downstreamSummary).toBe("Test runner failures likely caused by compile/typecheck issues.");
+  });
+
+  it("keeps compile blockers above lint issues when both are present", () => {
+    const summary = summarizeLog([
+      "src/foo.ts:12:5 - error TS2304: Cannot find name 'bar'.",
+      "",
+      "/repo/src/foo.ts",
+      "  12:5  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any"
+    ].join("\n"));
+
+    expect(summary.issues[0]).toMatchObject({
+      tool: "tsc",
+      priority: "high"
+    });
+    expect(summary.primaryBlocker).toBe("TypeScript compile/typecheck errors");
+  });
+
+  it("clusters repeated TypeScript assignment errors by target type", () => {
+    const summary = summarizeLog(loadFixture("cluster-ts-assignments.log"));
+
+    expect(summary.detectedTool).toBe("tsc");
+    expect(summary.uniqueIssues).toBe(4);
+  });
+
+  it("clusters repeated missing-property errors by target type without merging unrelated targets", () => {
+    const summary = summarizeLog(loadFixture("cluster-ts-missing-properties.log"));
+
+    expect(summary.detectedTool).toBe("tsc");
+    expect(summary.uniqueIssues).toBe(4);
+  });
+
+  it("clusters repeated module resolution failures by missing module", () => {
+    const summary = summarizeLog(loadFixture("cluster-ts-imports.log"));
+
+    expect(summary.detectedTool).toBe("tsc");
+    expect(summary.issues[0]).toMatchObject({
+      ruleOrCode: "TS2307",
+      priority: "high"
+    });
   });
 });
 

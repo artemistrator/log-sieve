@@ -49,6 +49,7 @@ describe("cli argument parsing", () => {
   it("parses run mode with backward-compatible json", () => {
     expect(parseArgs(["--run", "npm test", "--json"])).toEqual({
       run: "npm test",
+      runs: ["npm test"],
       quiet: false,
       failOn: "none",
       ci: false,
@@ -78,6 +79,19 @@ describe("cli argument parsing", () => {
     expect(() => parseArgs(["--file", "build.log", "--run", "npm test"])).toThrow(
       "Choose one input source"
     );
+  });
+
+  it("parses repeated run flags for multi-run diagnosis", () => {
+    expect(parseArgs(["--run", "npm run build", "--run", "npm test"])).toEqual({
+      format: "text",
+      forLlm: false,
+      quiet: false,
+      failOn: "none",
+      ci: false,
+      printRawOnError: false,
+      help: false,
+      runs: ["npm run build", "npm test"]
+    });
   });
 
   it("rejects ambiguous json and format combinations", () => {
@@ -114,6 +128,7 @@ describe("cli argument parsing", () => {
 
   it("renders help text with run mode", () => {
     expect(getHelpText()).toContain("--run <command>");
+    expect(getHelpText()).toContain("(repeatable)");
     expect(getHelpText()).toContain("--format <fmt>");
     expect(getHelpText()).toContain("--output <file>");
     expect(getHelpText()).toContain("--fail-on <m>");
@@ -313,5 +328,45 @@ describe("cli execution", () => {
     );
 
     expect(exitCode).toBe(5);
+  });
+
+  it("executes repeated run flags sequentially and renders a cross-run diagnosis", async () => {
+    const capture = createIo();
+
+    const exitCode = await executeCli(
+      [
+        "--run",
+        "node -e \"process.stdout.write('src/app.ts:3:14 - error TS2322: Type \\'string\\' is not assignable to type \\'number\\'.\\\\n'); process.exit(2)\"",
+        "--run",
+        "node -e \"process.stdout.write('FAIL  tests/auth.test.ts\\\\n  ● Test suite failed to run\\\\n    Cannot read properties of undefined (reading \\'token\\')\\\\n'); process.exit(1)\""
+      ],
+      capture.io
+    );
+
+    expect(exitCode).toBe(2);
+    expect(capture.getStdout()).toContain("Detected: multi-run");
+    expect(capture.getStdout()).toContain("Most informative run:");
+    expect(capture.getStdout()).toContain("Primary blocker: TypeScript compile/typecheck errors");
+    expect(capture.getStdout()).toContain("Downstream runs:");
+  });
+
+  it("prints raw cleaned log for noisy multi-run failures when requested", async () => {
+    const capture = createIo();
+
+    const exitCode = await executeCli(
+      [
+        "--run",
+        "node -e \"process.stderr.write('Build exploded badly\\\\n'); process.exit(3)\"",
+        "--run",
+        "node -e \"process.stdout.write('src/foo.ts:12:5 - error TS2304: Cannot find name \\'bar\\'.\\\\n'); process.exit(2)\"",
+        "--quiet",
+        "--print-raw-on-error"
+      ],
+      capture.io
+    );
+
+    expect(exitCode).toBe(3);
+    expect(capture.getStderr()).toContain("Raw cleaned log for");
+    expect(capture.getStderr()).toContain("Build exploded badly");
   });
 });

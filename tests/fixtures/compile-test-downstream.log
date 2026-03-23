@@ -1,0 +1,19 @@
+> demo-app@1.0.0 verify
+> npm run build && npm run test
+
+> demo-app@1.0.0 build
+> tsc --pretty false
+
+src/foo.ts:12:5 - error TS2304: Cannot find name 'bar'.
+src/app.ts:4:17 - error TS2339: Property 'token' does not exist on type 'User'.
+
+> demo-app@1.0.0 test
+> vitest run
+
+ FAIL  tests/auth.test.ts
+  ● Test suite failed to run
+    Cannot read properties of undefined (reading 'token')
+
+ FAIL  tests/auth.test.ts > auth flow > rejects invalid password
+ AssertionError: expected true to be false
+   at tests/auth.test.ts:18:12

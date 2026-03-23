@@ -2,8 +2,10 @@ import { stdout, stderr } from "node:process";
 
 import { cleanLog } from "./cleanLog.js";
 import { computeExitCode } from "./computeExitCode.js";
+import { createMultiRunSummary, executeRuns, getMultiRunBaseExitCode } from "./multiRun.js";
 import { getHelpText, parseArgs } from "./parseArgs.js";
 import { readInput } from "./readInput.js";
+import { renderMultiRunOutput } from "./renderMultiRunOutput.js";
 import { renderOutput } from "./renderOutput.js";
 import { summarizeLog } from "./summarizeLog.js";
 import { writeOutput } from "./writeOutput.js";
@@ -31,6 +33,10 @@ export async function executeCli(args: string[], io: ExecuteCliIo = defaultIo): 
   if (options.help) {
     io.writeStdout(`${getHelpText()}\n`);
     return 0;
+  }
+
+  if ((options.runs?.length ?? 0) > 1) {
+    return executeMultiRunCli(options, io);
   }
 
   let input;
@@ -81,6 +87,47 @@ export async function executeCli(args: string[], io: ExecuteCliIo = defaultIo): 
     baseExitCode,
     failOn: options.failOn,
     summary
+  });
+}
+
+async function executeMultiRunCli(options: CliOptions, io: ExecuteCliIo): Promise<number> {
+  let runs;
+
+  try {
+    runs = await executeRuns(options.runs ?? []);
+  } catch (error) {
+    io.writeStderr(`${getErrorMessage(error)}\n`);
+    return 2;
+  }
+
+  const multiRunSummary = createMultiRunSummary(runs, options);
+  const output = renderMultiRunOutput(multiRunSummary, options);
+
+  if (options.output) {
+    try {
+      await writeOutput(options.output, output);
+    } catch (error) {
+      io.writeStderr(`${getErrorMessage(error)}\n`);
+      return 2;
+    }
+  }
+
+  if (!options.quiet) {
+    io.writeStdout(`${output}\n`);
+  }
+
+  if (options.printRawOnError) {
+    for (const run of runs) {
+      if (run.exitCode !== 0 && run.summary.uniqueIssues === 0 && run.cleanedLog.trim() !== "") {
+        io.writeStderr(`Raw cleaned log for "${run.command}":\n${run.cleanedLog}\n`);
+      }
+    }
+  }
+
+  return computeExitCode({
+    baseExitCode: getMultiRunBaseExitCode(runs),
+    failOn: options.failOn,
+    summary: multiRunSummary.aggregateSummary
   });
 }
 

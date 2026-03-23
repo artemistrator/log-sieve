@@ -1,3 +1,4 @@
+import { getIssueBlockerRank, getIssuePriority } from "./diagnoseIssues.js";
 import type { Issue, IssuePriority } from "../types.js";
 
 const priorityOrder: Record<IssuePriority, number> = {
@@ -15,23 +16,12 @@ export function prioritizeIssues(issues: Issue[]): Issue[] {
     .sort(compareIssues);
 }
 
-export function getIssuePriority(issue: Issue): IssuePriority {
-  if (issue.tool === "tsc") {
-    return "high";
-  }
-
-  if (issue.tool === "test" && (issue.category === "failure" || issue.category === "assertion")) {
-    return "high";
-  }
-
-  if (issue.tool === "eslint") {
-    return issue.category === "error" ? "medium" : "low";
-  }
-
-  return "low";
-}
-
 function compareIssues(left: Issue, right: Issue): number {
+  const blockerDifference = getIssueBlockerRank(right) - getIssueBlockerRank(left);
+  if (blockerDifference !== 0) {
+    return blockerDifference;
+  }
+
   const priorityDifference =
     priorityOrder[right.priority ?? "low"] - priorityOrder[left.priority ?? "low"];
 

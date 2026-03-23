@@ -1,4 +1,4 @@
-import type { Issue, ReportView } from "../types.js";
+import type { Issue, IssueCluster, ReportView } from "../types.js";
 
 export function formatMarkdown(view: ReportView, forLlm: boolean): string {
   const lines = [
@@ -9,12 +9,25 @@ export function formatMarkdown(view: ReportView, forLlm: boolean): string {
     `- Unique issues: ${view.uniqueIssues}`
   ];
 
-  if (view.rootCauseHint) {
+  if (view.primaryBlocker) {
+    lines.push(`- Primary blocker: ${escapeInline(view.primaryBlocker)}`);
+  }
+
+  if (view.downstreamSummary) {
+    lines.push(`- Downstream symptoms: ${escapeInline(view.downstreamSummary)}`);
+  } else if (view.rootCauseHint) {
     lines.push(`- Root cause hint: ${escapeInline(view.rootCauseHint)}`);
   }
 
   if (view.issues.length > 0) {
-    lines.push("", "## Top issues");
+    if (view.clusters.length > 0) {
+      lines.push("", "## Top patterns");
+      view.clusters.forEach((cluster, index) => {
+        lines.push(`${index + 1}. ${formatMarkdownCluster(cluster)}`);
+      });
+    }
+
+    lines.push("", view.clusters.length > 0 ? "## Representative issues" : "## Top issues");
     view.issues.forEach((issue, index) => {
       lines.push(`${index + 1}. ${formatMarkdownIssue(issue)}`);
     });
@@ -51,6 +64,18 @@ function formatMarkdownIssue(issue: Issue): string {
   const location = formatLocation(issue);
   const code = issue.ruleOrCode ? ` \`[${escapeInline(issue.ruleOrCode)}]\`` : "";
   return `${location}${code} ${escapeInline(issue.message)}`.trim();
+}
+
+function formatMarkdownCluster(cluster: IssueCluster): string {
+  const example = cluster.representativeIssues[0];
+  const filesLabel = cluster.fileCount === 1 ? "1 file" : `${cluster.fileCount} files`;
+  const base = `${cluster.count} issue(s) match: ${escapeInline(cluster.label)} (${filesLabel})`;
+
+  if (!example) {
+    return base;
+  }
+
+  return `${base}; example: ${formatMarkdownIssue(example)}`;
 }
 
 function formatLocation(issue: Issue): string {

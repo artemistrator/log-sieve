@@ -1,0 +1,4 @@
+src/subscription/create.ts:14:3 - error TS2741: Property 'plan' is missing in type '{ id: string; }' but required in type 'Subscription'.
+src/subscription/update.ts:22:7 - error TS2741: Property 'status' is missing in type '{ id: string; plan: PlanTier; }' but required in type 'Subscription'.
+src/subscription/cache.ts:35:5 - error TS2739: Type '{ id: string; }' is missing the following properties from type 'Subscription': plan, status
+src/account/profile.ts:12:2 - error TS2741: Property 'email' is missing in type '{ id: string; }' but required in type 'Profile'.

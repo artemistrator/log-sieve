@@ -1,4 +1,4 @@
-import type { Issue, ReportView } from "../types.js";
+import type { Issue, IssueCluster, ReportView } from "../types.js";
 
 export function formatText(view: ReportView, forLlm: boolean): string {
   const lines = [
@@ -7,14 +7,27 @@ export function formatText(view: ReportView, forLlm: boolean): string {
     `Unique issues: ${view.uniqueIssues}`
   ];
 
-  if (view.rootCauseHint) {
+  if (view.primaryBlocker) {
+    lines.push(`Primary blocker: ${view.primaryBlocker}`);
+  }
+
+  if (view.downstreamSummary) {
+    lines.push(`Downstream symptoms: ${view.downstreamSummary}`);
+  } else if (view.rootCauseHint) {
     lines.push(`Root cause hint: ${view.rootCauseHint}`);
   }
 
   if (view.issues.length === 0) {
     lines.push("", "No structured issues found.");
   } else {
-    lines.push("", "Top issues:");
+    if (view.clusters.length > 0) {
+      lines.push("", "Top patterns:");
+      view.clusters.forEach((cluster, index) => {
+        lines.push(`${index + 1}. ${formatCluster(cluster)}`);
+      });
+    }
+
+    lines.push("", view.clusters.length > 0 ? "Representative issues:" : "Top issues:");
     view.issues.forEach((issue, index) => {
       lines.push(`${index + 1}. ${formatIssue(issue)}`);
     });
@@ -63,6 +76,18 @@ function formatIssue(issue: Issue): string {
 
   parts.push(issue.message);
   return parts.join(" ");
+}
+
+function formatCluster(cluster: IssueCluster): string {
+  const example = cluster.representativeIssues[0];
+  const filesLabel = cluster.fileCount === 1 ? "1 file" : `${cluster.fileCount} files`;
+  const base = `${cluster.count} issue(s) match: ${cluster.label} (${filesLabel})`;
+
+  if (!example) {
+    return base;
+  }
+
+  return `${base}; example: ${formatIssue(example)}`;
 }
 
 function formatPosition(line?: number, column?: number): string | undefined {

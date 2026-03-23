@@ -1,33 +1,75 @@
 import { cleanLog } from "./cleanLog.js";
 import { dedupeIssues } from "./dedupeIssues.js";
 import { selectBestFormat } from "./detectFormat.js";
+import { diagnoseIssues } from "./diagnoseIssues.js";
 import { prioritizeIssues } from "./prioritizeIssues.js";
-import type { Issue, Summary } from "../types.js";
+import type { Issue, Summary, ToolName } from "../types.js";
 
 export function summarizeLog(rawInput: string): Summary {
   const cleaned = cleanLog(rawInput);
   const { tool: detectedTool, issues } = selectBestFormat(cleaned);
   const uniqueIssues = prioritizeIssues(dedupeIssues(issues));
+  return createSummaryFromIssues(detectedTool, issues.length, uniqueIssues);
+}
+
+export function createSummaryFromIssues(
+  detectedTool: ToolName,
+  totalIssues: number,
+  issues: Issue[]
+): Summary {
+  const diagnosis = diagnoseIssues(issues);
 
   const summary: Summary = {
     detectedTool,
-    totalIssues: issues.length,
-    uniqueIssues: uniqueIssues.length,
-    issues: uniqueIssues,
-    nextStep: getNextStepHint(detectedTool, uniqueIssues)
+    totalIssues,
+    uniqueIssues: issues.length,
+    issues,
+    nextStep: getNextStepHint(
+      detectedTool,
+      issues,
+      diagnosis.primaryBlocker,
+      diagnosis.downstreamSummary
+    ),
+    primaryIssues: diagnosis.primaryIssues,
+    downstreamIssues: diagnosis.downstreamIssues,
+    secondaryIssues: diagnosis.secondaryIssues
   };
 
-  const rootCauseHint = getRootCauseHint(uniqueIssues);
-  if (rootCauseHint) {
-    summary.rootCauseHint = rootCauseHint;
+  if (diagnosis.primaryBlocker) {
+    summary.primaryBlocker = diagnosis.primaryBlocker;
+  }
+
+  if (diagnosis.downstreamSummary) {
+    summary.downstreamSummary = diagnosis.downstreamSummary;
+  }
+
+  if (diagnosis.rootCauseHint) {
+    summary.rootCauseHint = diagnosis.rootCauseHint;
   }
 
   return summary;
 }
 
-function getNextStepHint(detectedTool: Summary["detectedTool"], issues: Issue[]): string {
+function getNextStepHint(
+  detectedTool: Summary["detectedTool"],
+  issues: Issue[],
+  primaryBlocker: string | undefined,
+  downstreamSummary: string | undefined
+): string {
   if (issues.length === 0) {
     return "If the command still failed, rerun with --print-raw-on-error to inspect the cleaned log.";
+  }
+
+  if (primaryBlocker === "TypeScript compile/typecheck errors") {
+    return downstreamSummary
+      ? "Fix compile/typecheck issues first before trusting test failures."
+      : "Fix the TypeScript compile errors first, then rerun the command.";
+  }
+
+  if (primaryBlocker === "Module or import resolution errors") {
+    return downstreamSummary
+      ? "Fix module/import resolution errors first before trusting test failures."
+      : "Fix the module/import resolution errors first, then rerun the command.";
   }
 
   if (detectedTool === "tsc") {
@@ -45,33 +87,4 @@ function getNextStepHint(detectedTool: Summary["detectedTool"], issues: Issue[])
   }
 
   return "Start with the highest-priority issue above, then rerun the command.";
-}
-
-function getRootCauseHint(issues: Issue[]): string | undefined {
-  if (issues.length === 0) {
-    return undefined;
-  }
-
-  const tscCount = issues.filter((issue) => issue.tool === "tsc").length;
-  const testCount = issues.filter((issue) => issue.tool === "test").length;
-  const eslintCount = issues.filter((issue) => issue.tool === "eslint").length;
-  const largest = Math.max(tscCount, testCount, eslintCount);
-
-  if (largest === 0) {
-    return undefined;
-  }
-
-  if (tscCount === largest) {
-    return "TypeScript compile errors are blocking downstream checks.";
-  }
-
-  if (testCount === largest) {
-    return "Test failures appear to be the main blocker.";
-  }
-
-  if (eslintCount === largest) {
-    return "Lint violations are the primary issue in this run.";
-  }
-
-  return undefined;
 }

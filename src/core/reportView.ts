@@ -1,19 +1,23 @@
+import { clusterIssues, getIssueClusterKey } from "./clusterIssues.js";
 import { cwd } from "node:process";
 import { isAbsolute, relative } from "node:path";
 
-import type { GroupedCount, Issue, RenderOptions, ReportView, Summary } from "../types.js";
+import type { GroupedCount, Issue, IssueCluster, RenderOptions, ReportView, Summary } from "../types.js";
 
 const defaultTextIssueCount = 5;
 const defaultLlmIssueCount = 3;
 const defaultCiIssueCount = 3;
 
 export function createReportView(summary: Summary, options: RenderOptions): ReportView {
-  const llmIssues = options.forLlm ? selectLlmIssues(summary.issues) : summary.issues;
-  const displayIssues = toDisplayIssues(compactIssuesForDisplay(llmIssues));
+  const llmIssues = options.forLlm ? selectLlmIssues(summary) : summary.issues;
+  const rawClusters = clusterIssues(llmIssues);
+  const clusters = toDisplayClusters(rawClusters);
+  const displayIssues = toDisplayIssues(compactIssuesForDisplay(selectRepresentativeIssues(llmIssues, rawClusters)));
   const issueLimit =
     options.maxIssues ??
     (options.ci ? defaultCiIssueCount : options.forLlm ? defaultLlmIssueCount : defaultTextIssueCount);
   const issues = displayIssues.slice(0, issueLimit);
+  const limitedClusters = clusters.slice(0, issueLimit);
   const omittedIssues = Math.max(displayIssues.length - issues.length, 0);
   const grouped = groupIssues(issues);
 
@@ -22,6 +26,7 @@ export function createReportView(summary: Summary, options: RenderOptions): Repo
     totalIssues: summary.totalIssues,
     uniqueIssues: summary.uniqueIssues,
     issues,
+    clusters: limitedClusters,
     groupedTitle: grouped.title,
     groupedItems: grouped.items.slice(0, 5),
     nextStep: summary.nextStep,
@@ -34,7 +39,15 @@ export function createReportView(summary: Summary, options: RenderOptions): Repo
     view.rootCauseHint = summary.rootCauseHint;
   }
 
-  const likelyFirstFixTarget = getLikelyFirstFixTarget(issues[0]);
+  if (summary.primaryBlocker) {
+    view.primaryBlocker = summary.primaryBlocker;
+  }
+
+  if (summary.downstreamSummary) {
+    view.downstreamSummary = summary.downstreamSummary;
+  }
+
+  const likelyFirstFixTarget = getLikelyFirstFixTarget((summary.primaryIssues ?? issues)[0] ?? issues[0]);
   if (likelyFirstFixTarget) {
     view.likelyFirstFixTarget = likelyFirstFixTarget;
   }
@@ -42,7 +55,16 @@ export function createReportView(summary: Summary, options: RenderOptions): Repo
   return view;
 }
 
-function selectLlmIssues(issues: Issue[]): Issue[] {
+function selectLlmIssues(summary: Summary): Issue[] {
+  const primaryIssues = summary.primaryIssues ?? [];
+  if (primaryIssues.length > 0) {
+    const supportingIssues = [...(summary.downstreamIssues ?? []), ...(summary.secondaryIssues ?? [])].filter(
+      (issue) => issue.priority === "high" || issue.priority === "medium"
+    );
+    return [...primaryIssues, ...supportingIssues];
+  }
+
+  const issues = summary.issues;
   const actionable = issues.filter((issue) => issue.priority === "high" || issue.priority === "medium");
   return actionable.length > 0 ? actionable : issues;
 }
@@ -63,6 +85,40 @@ function compactIssuesForDisplay(issues: Issue[]): Issue[] {
   });
 }
 
+function selectRepresentativeIssues(issues: Issue[], clusters: IssueCluster[]): Issue[] {
+  const representativeIssues = new Set<Issue>();
+
+  for (const cluster of clusters) {
+    for (const issue of cluster.representativeIssues) {
+      representativeIssues.add(issue);
+    }
+  }
+
+  const clusteredNonRepresentatives = new Set<Issue>();
+  for (const cluster of clusters) {
+    for (const issue of issues) {
+      if (representativeIssues.has(issue)) {
+        continue;
+      }
+
+      if (clusterMatchesIssue(cluster, issue)) {
+        clusteredNonRepresentatives.add(issue);
+      }
+    }
+  }
+
+  return issues.filter((issue) => !clusteredNonRepresentatives.has(issue));
+}
+
+function clusterMatchesIssue(cluster: IssueCluster, issue: Issue): boolean {
+  const representative = cluster.representativeIssues[0];
+  if (!representative) {
+    return false;
+  }
+
+  return getIssueClusterKey(representative) === getIssueClusterKey(issue);
+}
+
 function toDisplayIssues(issues: Issue[]): Issue[] {
   return issues.map((issue) => {
     if (!issue.file) {
@@ -80,6 +136,15 @@ function toDisplayIssues(issues: Issue[]): Issue[] {
     };
   });
 }
+
+function toDisplayClusters(clusters: IssueCluster[]): IssueCluster[] {
+  return clusters.map((cluster) => ({
+    ...cluster,
+    files: cluster.files.map(toDisplayPath),
+    representativeIssues: toDisplayIssues(cluster.representativeIssues)
+  }));
+}
+
 
 function groupIssues(issues: Issue[]): { title: string; items: GroupedCount[] } {
   const fileCounts = new Map<string, number>();

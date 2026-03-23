@@ -1,0 +1,15 @@
+> demo-app@1.0.0 verify
+> npm run build && npm run test
+
+> demo-app@1.0.0 build
+> tsc --pretty false
+
+src/setup.ts:1:21 - error TS2307: Cannot find module './missing' or its corresponding type declarations.
+
+> demo-app@1.0.0 test
+> jest --runInBand
+
+FAIL tests/setup.test.ts
+  ● Test suite failed to run
+
+    Cannot find module './missing' from 'src/setup.ts'

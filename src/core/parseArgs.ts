@@ -43,7 +43,7 @@ export function parseArgs(args: string[]): CliOptions {
         throw new Error("Missing value for --run");
       }
 
-      options.run = command;
+      options.runs = [...(options.runs ?? []), command];
       index += 1;
       continue;
     }
@@ -116,7 +116,12 @@ export function parseArgs(args: string[]): CliOptions {
     throw new Error(`Unknown argument: ${arg}`);
   }
 
-  if (options.file && options.run) {
+  const singleRun = options.runs?.length === 1 ? options.runs[0] : undefined;
+  if (singleRun) {
+    options.run = singleRun;
+  }
+
+  if (options.file && options.runs && options.runs.length > 0) {
     throw new Error("Choose one input source: use either --file <path> or --run \"<command>\".");
   }
 
@@ -145,7 +150,7 @@ export function getHelpText(): string {
     "",
     "Input:",
     "  --file <path>   Read logs from a file",
-    "  --run <command> Run a shell command and summarize its combined output",
+    "  --run <command> Run a shell command and summarize its combined output (repeatable)",
     "  stdin           Read piped input when no explicit source is passed",
     "",
     "Output:",

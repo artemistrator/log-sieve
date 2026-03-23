@@ -1,3 +1,4 @@
+import { clusterIssues } from "./clusterIssues.js";
 import type { Issue, Summary } from "../types.js";
 
 export function formatJson(
@@ -12,7 +13,13 @@ export function formatJson(
     totalIssues: summary.totalIssues,
     uniqueIssues: summary.uniqueIssues,
     issues,
+    clusters: clusterIssues(issues),
     nextStep: summary.nextStep,
+    primaryBlocker: summary.primaryBlocker,
+    downstreamSummary: summary.downstreamSummary,
+    primaryIssues: summary.primaryIssues ?? [],
+    downstreamIssues: summary.downstreamIssues ?? [],
+    secondaryIssues: summary.secondaryIssues ?? [],
     rootCauseHint: summary.rootCauseHint,
     truncated,
     omittedIssues

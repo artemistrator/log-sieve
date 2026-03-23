@@ -23,11 +23,17 @@ export interface Summary {
   issues: Issue[];
   nextStep: string;
   rootCauseHint?: string;
+  primaryBlocker?: string;
+  downstreamSummary?: string;
+  primaryIssues?: Issue[];
+  downstreamIssues?: Issue[];
+  secondaryIssues?: Issue[];
 }
 
 export interface CliOptions {
   file?: string;
   run?: string;
+  runs?: string[];
   output?: string;
   format: OutputFormat;
   forLlm: boolean;
@@ -59,15 +65,30 @@ export interface GroupedCount {
   count: number;
 }
 
+export interface IssueCluster {
+  tool: string;
+  category: string;
+  label: string;
+  count: number;
+  fileCount: number;
+  files: string[];
+  representativeIssues: Issue[];
+  priority?: IssuePriority;
+  ruleOrCode?: string;
+}
+
 export interface ReportView {
   detectedTool: ToolName;
   totalIssues: number;
   uniqueIssues: number;
   issues: Issue[];
+  clusters: IssueCluster[];
   groupedTitle: string;
   groupedItems: GroupedCount[];
   nextStep: string;
   rootCauseHint?: string;
+  primaryBlocker?: string;
+  downstreamSummary?: string;
   recommendedFixOrder: string[];
   likelyFirstFixTarget?: string;
   truncated: boolean;
@@ -77,4 +98,20 @@ export interface ReportView {
 export interface ExecuteCliIo {
   writeStdout: (text: string) => void;
   writeStderr: (text: string) => void;
+}
+
+export interface RunSummary {
+  command: string;
+  exitCode: number;
+  summary: Summary;
+  cleanedLog: string;
+}
+
+export interface MultiRunSummary {
+  runs: RunSummary[];
+  aggregateSummary: Summary;
+  mostInformativeRunIndex: number;
+  downstreamRunIndexes: number[];
+  bestFirstFixTarget?: string;
+  nextStep: string;
 }
