@@ -1,0 +1,50 @@
+{
+  "name": "log-sieve",
+  "version": "0.2.0",
+  "description": "CLI for compressing noisy JS/TS build, lint, and test logs into actionable summaries.",
+  "type": "module",
+  "bin": {
+    "log-sieve": "./dist/cli.js"
+  },
+  "scripts": {
+    "clean": "node ./scripts/clean.mjs",
+    "build": "npm run clean && tsc -p tsconfig.json",
+    "dev": "tsx src/cli.ts",
+    "pack:local": "npm pack --cache /tmp/log-sieve-npm-cache",
+    "test": "vitest run",
+    "smoke": "npm run build && node ./scripts/smoke.mjs",
+    "smoke:install": "npm run build && node ./scripts/smoke-install.mjs",
+    "prepack": "npm run build"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "cli",
+    "logs",
+    "build",
+    "lint",
+    "test",
+    "typescript",
+    "javascript",
+    "eslint",
+    "jest",
+    "vitest",
+    "npm",
+    "pnpm",
+    "yarn"
+  ],
+  "license": "MIT",
+  "x-publish-todo": "Set repository, homepage, and bugs URLs before public publish.",
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

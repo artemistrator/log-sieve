@@ -1,0 +1,6 @@
+> npm run build
+[runner] starting tasks
+src/foo.ts:12:5 - error TS2304: Cannot find name 'bar'.
+src/foo.ts:12:5 - error TS2304: Cannot find name 'bar'.
+Error: command failed
+    at run (/tmp/tool.js:10:2)

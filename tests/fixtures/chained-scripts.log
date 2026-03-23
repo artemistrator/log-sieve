@@ -1,0 +1,28 @@
+> demo-app@1.0.0 check
+> npm run build && npm run lint && npm run test
+
+> demo-app@1.0.0 build
+> tsc --pretty false
+
+/Users/example/demo-app/src/foo.ts:12:5 - error TS2304: Cannot find name 'bar'.
+
+> demo-app@1.0.0 lint
+> eslint . --format stylish
+
+/Users/example/demo-app/src/foo.ts
+  12:5  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  12:5  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+> demo-app@1.0.0 test
+> vitest run
+
+ FAIL  tests/foo.test.ts > handles foo
+AssertionError: expected 1 to be 2 // Object.is equality
+ ❯ /Users/example/demo-app/tests/foo.test.ts:9:10
+
+⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯
+ FAIL  tests/foo.test.ts > handles foo
+AssertionError: expected 1 to be 2 // Object.is equality
+ ❯ tests/foo.test.ts:9:10
+
+ ELIFECYCLE  Command failed with exit code 1.

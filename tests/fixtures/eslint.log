@@ -1,0 +1,6 @@
+/repo/src/app.ts
+  44:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  52:3   warning  Unexpected console statement  no-console
+
+/repo/src/util.ts
+  10:1  error  Missing return type on function  @typescript-eslint/explicit-function-return-type

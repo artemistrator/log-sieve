@@ -1,0 +1,11 @@
+> demo-app@1.0.0 build
+> tsc --pretty false
+
+src/foo.ts:12:5 - error TS2304: Cannot find name 'bar'.
+
+src/app.ts(44,10): error TS2339: Property 'x' does not exist on type 'User'.
+
+npm error code ELIFECYCLE
+npm error path /Users/example/demo-app
+npm error command failed
+npm error command sh -c tsc --pretty false

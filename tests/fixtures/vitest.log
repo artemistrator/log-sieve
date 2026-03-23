@@ -1,0 +1,12 @@
+FAIL  tests/auth.test.ts > auth flow > rejects invalid password
+AssertionError: expected true to be false // Object.is equality
+    at tests/auth.test.ts:18:12
+
+FAIL tests/user.test.ts
+  ● loads profile
+    AssertionError: expected "Ada" to be "Grace"
+      at tests/user.test.ts:27:20
+
+FAIL  tests/auth.test.ts > auth flow > rejects invalid password
+AssertionError: expected true to be false // Object.is equality
+    at tests/auth.test.ts:18:12

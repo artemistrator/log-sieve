@@ -1,0 +1,13 @@
+> demo-app@1.0.0 lint /Users/example/demo-app
+> eslint . --format stylish
+
+/Users/example/demo-app/src/app.ts
+  44:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  52:3   warning  Unexpected console statement  no-console
+
+/Users/example/demo-app/src/util.ts
+  10:1  error  Missing return type on function  @typescript-eslint/explicit-function-return-type
+
+✖ 3 problems (2 errors, 1 warning)
+
+ ELIFECYCLE  Command failed with exit code 1.
