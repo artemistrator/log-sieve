@@ -36,8 +36,15 @@
     "pnpm",
     "yarn"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/artemistrator/log-sieve.git"
+  },
+  "homepage": "https://github.com/artemistrator/log-sieve#readme",
+  "bugs": {
+    "url": "https://github.com/artemistrator/log-sieve/issues"
+  },
   "license": "MIT",
-  "x-publish-todo": "Set repository, homepage, and bugs URLs before public publish.",
   "engines": {
     "node": ">=18"
   },

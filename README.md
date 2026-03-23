@@ -23,11 +23,11 @@ Before:
 
 > demo-app@1.0.0 build
 > tsc --pretty false
-/Users/example/demo-app/src/foo.ts:12:5 - error TS2304: Cannot find name 'bar'.
+src/foo.ts:12:5 - error TS2304: Cannot find name 'bar'.
 
 > demo-app@1.0.0 lint
 > eslint . --format stylish
-/Users/example/demo-app/src/foo.ts
+src/foo.ts
   12:5  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
 > demo-app@1.0.0 test
@@ -48,9 +48,9 @@ Unique issues: 3
 Root cause hint: TypeScript compile errors are blocking downstream checks.
 
 Top issues:
-1. /Users/example/demo-app/src/foo.ts:12:5 [TS2304] Cannot find name 'bar'.
+1. src/foo.ts:12:5 [TS2304] Cannot find name 'bar'.
 2. tests/foo.test.ts:9:10 AssertionError: expected 1 to be 2 // Object.is equality
-3. /Users/example/demo-app/src/foo.ts:12:5 [@typescript-eslint/no-explicit-any] Unexpected any. Specify a different type
+3. src/foo.ts:12:5 [@typescript-eslint/no-explicit-any] Unexpected any. Specify a different type
 ```
 
 ## Installation
@@ -74,6 +74,8 @@ If you do not want a global install, you can also run the built CLI directly:
 ```bash
 node dist/cli.js --help
 ```
+
+For a tarball-based local install flow, see [DOGFOODING.md](/Users/artem/Desktop/log-sieve/DOGFOODING.md).
 
 ## Quick start
 
@@ -225,7 +227,7 @@ LLM mode works with text and Markdown output. It keeps higher-value issues first
 ## Current limitations
 
 - command mode captures output after the command exits; it does not stream interactive logs
-- `--output` overwrites files directly and does not create missing parent directories
+- `--output` overwrites files directly
 - `--ci` is a compact summary mode only; it does not emit annotations
 - mixed logs are combined only across the built-in JS/TS parsers
 - unsupported tools still fall back to the generic parser
