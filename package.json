@@ -1,6 +1,6 @@
 {
   "name": "log-sieve",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "CLI for compressing noisy JS/TS build, lint, and test logs into actionable summaries.",
   "type": "module",
   "bin": {
